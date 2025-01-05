@@ -6,10 +6,18 @@ import (
 	"os"
 )
 
-// provices functions to read and parse the ignore and track files
-func ReadIgnore() ([]string, error) {
+// ReadMagmaFile reads a file from the given path and returns a slice of strings,
+// each representing a line from the file. It skips empty lines and lines that
+// start with a '#' character (comments).
+//
+// Parameters:
+//   - path: The path to the file to be read.
+//
+// Returns:
+//   - []string: A slice of strings containing the
+func ReadMagmaFile(path string) ([]string, error) {
 	// open the ignore file
-	file, err := os.Open("/etc/magma/ignore")
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -29,31 +37,20 @@ func ReadIgnore() ([]string, error) {
 	return lines, nil
 }
 
-func ReadTrack() ([]string, error) {
-	// open the track file
-	file, err := os.Open("/etc/magma/track")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	// create a scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
-	var lines []string
-	for scanner.Scan() {
-		// skip empty lines and comments
-		if scanner.Text() == "" || scanner.Text()[0] == '#' {
-			continue
-		}
-		lines = append(lines, scanner.Text())
-	}
-
-	return lines, nil
-}
-
-func WriteTrack(paths []string) error {
+// WriteTrack writes a slice of strings to a specified file, each string on a new line.
+// The file is opened in append mode, so new lines are added to the end of the file.
+//
+// Parameters:
+//
+//	lines - a slice of strings to be written to the file
+//	trackFilePath - the path to the file where the lines will be written
+//
+// Returns:
+//
+//	error - an error if there is an issue opening the file, writing to it, or flushing the buffer
+func WriteTrack(lines []string, trackFilePath string) error {
 	// open the track file in append mode
-	file, err := os.OpenFile("/etc/magma/track", os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(trackFilePath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open track file: %w", err)
 	}
@@ -62,7 +59,7 @@ func WriteTrack(paths []string) error {
 	// create a writer
 	writer := bufio.NewWriter(file)
 
-	for _, path := range paths {
+	for _, path := range lines {
 		line := path + "\n" // Append newline directly
 		if _, err := writer.WriteString(line); err != nil {
 			return fmt.Errorf("failed to write to track file: %w", err)

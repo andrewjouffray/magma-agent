@@ -2,6 +2,7 @@ package track
 
 import (
 	"fmt"
+	"magma/internal/config"
 	"magma/internal/parsing"
 	"os"
 )
@@ -16,7 +17,7 @@ func AddPath(newPath string) error {
 	}
 
 	// read the current paths from the track file
-	currentPaths, err := parsing.ReadTrack()
+	currentPaths, err := parsing.ReadMagmaFile(config.TrackFile)
 	if err != nil {
 		return err
 	}
@@ -33,7 +34,7 @@ func AddPath(newPath string) error {
 	currentPaths = append(currentPaths, newPath)
 
 	// write the new paths to the track file
-	err = parsing.WriteTrack(currentPaths)
+	err = parsing.WriteTrack(currentPaths, config.TrackFile)
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func RemovePath(pathToRemove string) error {
 	}
 
 	// read the current paths from the track file
-	currentPaths, err := parsing.ReadTrack()
+	currentPaths, err := parsing.ReadMagmaFile(config.TrackFile)
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func RemovePath(pathToRemove string) error {
 	currentPaths = append(currentPaths, pathToRemove)
 
 	// write the new paths to the track file
-	err = parsing.WriteTrack(currentPaths)
+	err = parsing.WriteTrack(currentPaths, config.TrackFile)
 	if err != nil {
 		return err
 	}

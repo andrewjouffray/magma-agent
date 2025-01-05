@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"magma/internal/config"
 	"magma/internal/parsing"
 	"os"
 	"path/filepath"
@@ -11,7 +12,10 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
+// Node represents a node in the file tree, the root node is returned by the HashPath function
+// and can be parsed into JSON.
 type Node struct {
+	Path     string `json:"path"`     // The path of the file or directory
 	Hash     string `json:"hash"`     // The hash value of this node
 	Children []Node `json:"children"` // Child nodes
 }
@@ -20,12 +24,21 @@ var ignoreList []string
 
 func init() {
 	var err error
-	ignoreList, err = parsing.ReadIgnore()
+	ignoreList, err = parsing.ReadMagmaFile(config.IgnoreFile)
 	if err != nil {
 		fmt.Println("Error reading ignore file:", err)
 	}
 }
 
+// hashFile computes the SHA-256 hash of the file at the given filepath.
+// It returns the hash as a hexadecimal string or an error if any occurs during the process.
+//
+// Parameters:
+//   - filepath: The path to the file to be hashed.
+//
+// Returns:
+//   - string: The hexadecimal representation of the file's SHA-256 hash.
+//   - error: An error if the file cannot be opened or read.
 func hashFile(filepath string) (string, error) {
 	// opens the file at the given path
 	file, err := os.Open(filepath)
@@ -48,6 +61,18 @@ func hashFile(filepath string) (string, error) {
 	return hash, nil
 }
 
+// hashNodeList takes a slice of Node objects and a path string, concatenates
+// the Hash field of each Node into a single string, and returns the hash of
+// the concatenated string.
+//
+// Parameters:
+//
+//	nodes - a slice of Node objects, each containing a Hash field
+//	path  - a string representing the path (not used in the current implementation)
+//
+// Returns:
+//
+//	A string representing the hash of the concatenated Hash fields of the input nodes.
 func hashNodeList(nodes []Node, path string) string {
 
 	// concatenates all strings in the input list
@@ -69,6 +94,21 @@ func hashString(input string) string {
 }
 
 // recursively hashes all files in the given directory and subdirectories
+// HashPath computes a hash for the given file or directory path.
+// It returns a Node struct containing the hash and any child nodes.
+//
+// If the path is a symlink, it resolves the symlink and hashes the resolved path.
+// If the path is a directory, it recursively hashes all files and directories within it.
+// If the path is a file, it hashes the file content.
+//
+// The function also checks if the path is in the ignore list and skips hashing if it is.
+//
+// Parameters:
+//   - path: The file or directory path to hash.
+//
+// Returns:
+//   - Node: A Node struct containing the hash and any child nodes.
+//   - error: An error if any occurred during hashing.
 func HashPath(path string) (node Node, error error) {
 
 	var localNode Node
@@ -106,6 +146,7 @@ func HashPath(path string) (node Node, error error) {
 		hash := hashString(resolvedPath)
 		localNode.Hash = hash
 		localNode.Children = nil
+		localNode.Path = path
 		return localNode, nil
 
 	}
@@ -129,6 +170,7 @@ func HashPath(path string) (node Node, error error) {
 		nodeHash := hashNodeList(nodes, path)
 		localNode.Hash = nodeHash
 		localNode.Children = nodes
+		localNode.Path = path
 		return localNode, nil
 
 	} else if fileInfo.Mode()&os.ModeType != 0 {
@@ -144,6 +186,7 @@ func HashPath(path string) (node Node, error error) {
 	}
 	localNode.Hash = hash
 	localNode.Children = nil
+	localNode.Path = path
 	return localNode, nil
 
 }
