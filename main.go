@@ -18,7 +18,7 @@ func main() {
   |__|_|  (____  /\___  /|__|_|  (____  /
 	\/     \//_____/       \/     \/ 
   `
-	fmt.Println(asciiArt, "\n\n")
+	fmt.Println(asciiArt)
 
 	// Ensure at least one positional argument (command) is provided
 	if len(os.Args) < 1 {
@@ -37,7 +37,7 @@ func main() {
 			return
 		}
 		path := os.Args[2]
-		fmt.Println("Hashing files in", path, "...\n\n")
+		fmt.Println("Hashing files in", path, "...")
 		root, err := hashing.HashPath(path)
 		if err != nil {
 			fmt.Println(err)

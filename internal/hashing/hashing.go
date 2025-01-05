@@ -4,13 +4,26 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"magma/internal/parsing"
 	"os"
 	"path/filepath"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 type Node struct {
 	Hash     string `json:"hash"`     // The hash value of this node
 	Children []Node `json:"children"` // Child nodes
+}
+
+var ignoreList []string
+
+func init() {
+	var err error
+	ignoreList, err = parsing.ReadIgnore()
+	if err != nil {
+		fmt.Println("Error reading ignore file:", err)
+	}
 }
 
 func hashFile(filepath string) (string, error) {
@@ -32,9 +45,6 @@ func hashFile(filepath string) (string, error) {
 
 	// returns the hash as a string
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))
-	fmt.Printf("\033[2A") // Move up two lines
-	fmt.Printf("\rHash: %s\n", hash)
-	fmt.Printf("\r\033[KPath: %s\n", filepath)
 	return hash, nil
 }
 
@@ -48,9 +58,6 @@ func hashNodeList(nodes []Node, path string) string {
 
 	// hashes the concatenated string
 	hash := hashString(concatenated)
-	fmt.Printf("\033[2A") // Move up 2 lines
-	fmt.Printf("\rHash: %s\n", hash)
-	fmt.Printf("\r\033[KPath: %s\n", path)
 	return hash
 
 }
@@ -72,6 +79,16 @@ func HashPath(path string) (node Node, error error) {
 		return localNode, err
 	}
 
+	// check if the path is in the ignore list
+	for _, ignore := range ignoreList {
+		fmt.Println("checking", ignore, "against", path)
+		if match, _ := doublestar.Match(ignore, path); match {
+			fmt.Println("skipping", path)
+			localNode.Hash = "skipped"
+			return localNode, nil
+		}
+	}
+
 	// Check if the path is a symlink
 	if fileInfo.Mode()&os.ModeSymlink != 0 {
 
@@ -89,9 +106,6 @@ func HashPath(path string) (node Node, error error) {
 		hash := hashString(resolvedPath)
 		localNode.Hash = hash
 		localNode.Children = nil
-		fmt.Printf("\033[2A") // Move up 2 lines
-		fmt.Printf("\rHash: %s\n", hash)
-		fmt.Printf("\r\033[KPath: %s -> %s\n", path, resolvedPath)
 		return localNode, nil
 
 	}
