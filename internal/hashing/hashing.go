@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type Node struct {
@@ -31,11 +32,13 @@ func hashFile(filepath string) (string, error) {
 
 	// returns the hash as a string
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))
-	fmt.Println(hash)
+	fmt.Printf("\033[2A") // Move up two lines
+	fmt.Printf("\rHash: %s\n", hash)
+	fmt.Printf("\r\033[KPath: %s\n", filepath)
 	return hash, nil
 }
 
-func hashNodeList(nodes []Node) string {
+func hashNodeList(nodes []Node, path string) string {
 
 	// concatenates all strings in the input list
 	concatenated := ""
@@ -44,12 +47,18 @@ func hashNodeList(nodes []Node) string {
 	}
 
 	// hashes the concatenated string
-	hasher := sha256.New()
-	hasher.Write([]byte(concatenated))
-	hash := fmt.Sprintf("%x", hasher.Sum(nil))
-	fmt.Println(hash)
+	hash := hashString(concatenated)
+	fmt.Printf("\033[2A") // Move up 2 lines
+	fmt.Printf("\rHash: %s\n", hash)
+	fmt.Printf("\r\033[KPath: %s\n", path)
 	return hash
 
+}
+
+func hashString(input string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(input))
+	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
 // recursively hashes all files in the given directory and subdirectories
@@ -58,9 +67,33 @@ func HashPath(path string) (node Node, error error) {
 	var localNode Node
 
 	// check if the path is a file
-	fileInfo, err := os.Stat(path)
+	fileInfo, err := os.Lstat(path)
 	if err != nil {
 		return localNode, err
+	}
+
+	// Check if the path is a symlink
+	if fileInfo.Mode()&os.ModeSymlink != 0 {
+
+		// Handle the symlink
+		resolvedPath, err := os.Readlink(path)
+		if err != nil {
+			return localNode, fmt.Errorf("failed to resolve symlink: %w", err)
+		}
+		// If the resolved path is relative, make it absolute based on the symlink's parent directory
+		if !filepath.IsAbs(resolvedPath) {
+			resolvedPath = filepath.Join(filepath.Dir(path), resolvedPath)
+		}
+
+		// hash the resolved path string
+		hash := hashString(resolvedPath)
+		localNode.Hash = hash
+		localNode.Children = nil
+		fmt.Printf("\033[2A") // Move up 2 lines
+		fmt.Printf("\rHash: %s\n", hash)
+		fmt.Printf("\r\033[KPath: %s -> %s\n", path, resolvedPath)
+		return localNode, nil
+
 	}
 
 	if fileInfo.IsDir() {
@@ -79,20 +112,24 @@ func HashPath(path string) (node Node, error error) {
 			nodes = append(nodes, child)
 		}
 		// hash all the hashes of the files in the directory
-		nodeHash := hashNodeList(nodes)
+		nodeHash := hashNodeList(nodes, path)
 		localNode.Hash = nodeHash
 		localNode.Children = nodes
 		return localNode, nil
 
-	} else {
-		// hash the file
-		hash, err := hashFile(path)
-		if err != nil {
-			return localNode, err
-		}
-		localNode.Hash = hash
-		localNode.Children = nil
+	} else if fileInfo.Mode()&os.ModeType != 0 {
+		localNode.Hash = "skipped"
 		return localNode, nil
+
 	}
+
+	// hash the file
+	hash, err := hashFile(path)
+	if err != nil {
+		return localNode, err
+	}
+	localNode.Hash = hash
+	localNode.Children = nil
+	return localNode, nil
 
 }
