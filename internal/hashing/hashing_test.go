@@ -190,7 +190,7 @@ func TestHashPath_FileNotFound(t *testing.T) {
 
 func TestHashPath_IgnoreList_StartsWith(t *testing.T) {
 	// Add a pattern to the ignore list
-	ignoreList = append(ignoreList, "ignore_*")
+	ignoreList = append(ignoreList, "**/ignore_*")
 
 	// Create a temporary file
 	tmpfile, err := os.CreateTemp("", "ignore_me.txt")
@@ -221,7 +221,7 @@ func TestHashPath_IgnoreList_EndsWith(t *testing.T) {
 	defer os.Remove(tmpfile.Name()) // clean up
 
 	// Add a pattern to the ignore list
-	ignoreList = append(ignoreList, "*.log")
+	ignoreList = append(ignoreList, "**/*.log")
 
 	// Call the HashPath function
 	node, err := HashPath(tmpfile.Name())
@@ -265,7 +265,7 @@ func TestHashPath_IgnoreList_Directory(t *testing.T) {
 
 func TestHashPath_IgnoreList_Subdirectory(t *testing.T) {
 	// Add a pattern to the ignore list
-	ignoreList = append(ignoreList, "**/ignore_subdir/**")
+	ignoreList = append(ignoreList, "**/ignore_subdir/*")
 
 	// Create a temporary directory
 	tmpdir, err := os.MkdirTemp("", "example")

@@ -57,8 +57,10 @@ func Initialize() error {
 		lines := []string{
 			"# self directory",
 			"/etc/magma",
-			"# any hidden files or directories",
-			".*",
+			"# any hidden files or directories that start with a dot",
+			"**/.*",
+			"# example: **/*.log to ignore all log files",
+			"# example: **/logs/* to ignore all files in the logs directory",
 		}
 
 		// Write each line to the file
