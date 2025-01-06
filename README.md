@@ -1,4 +1,6 @@
 # magma-agent
+![Build Status](https://github.com/andrewjouffray/magma-agent/actions/workflows/go.yml/badge.svg)
+
 magma agent to track system directories, compute cryptographic hashes of files within those tracked directories and save them as json 'snapshots'. This is meant as a way to help developers track changes that they may have comited to on-premise systems that are not entirely tracked by a git repo.
 
 ## Requirements
