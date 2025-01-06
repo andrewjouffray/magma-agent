@@ -1,13 +1,23 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"magma/internal/config"
 	"magma/internal/hashing"
 	"magma/internal/initialize"
+	"magma/internal/parsing"
+	"magma/internal/track"
 	"os"
 )
 
+// main is the entry point of the magma-agent application. It displays an ASCII art banner,
+// checks for at least one positional argument (command), and executes the corresponding
+// command. Supported commands are:
+// - "snap [tag1] [tag2] ...": Creates a new cryptographic snapshot for all tracked files and directories.
+// - "track [path]": Adds a new path to the track file.
+// - "untrack [path]": Removes a path from the track file.
+// - "init": Initializes the magma directory.
+// If an unknown command is provided, it prints an error message.
 func main() {
 
 	asciiArt := `
@@ -22,7 +32,7 @@ func main() {
 
 	// Ensure at least one positional argument (command) is provided
 	if len(os.Args) < 1 {
-		fmt.Println("please provide a command (e.g., hash)")
+		fmt.Println("please provide a command (e.g., snap)")
 		return
 	}
 
@@ -30,43 +40,72 @@ func main() {
 	command := os.Args[1]
 
 	switch {
-	case command == "hash":
-		// Hash the files in the given directory
-		if len(os.Args) < 2 {
-			fmt.Println("Please provide a path to hash, e.g., magma hash /path/to/directory")
+
+	// creates a new cryptographic snapshot for all tracked files and directories
+	case command == "snap":
+
+		// Get the paths to track
+		trackPaths, err := parsing.ReadMagmaFile(config.TrackFile)
+		if err != nil {
+			fmt.Println("Error reading magma file:", err)
 			return
 		}
+
+		if len(trackPaths) == 0 {
+			fmt.Println("No paths to track")
+			return
+		}
+
+		// get all the optional tags for the snapshot
+		tags := os.Args[2:]
+
+		// Create a snapshot
+		err = hashing.SnapShot(config.SnapshotsDir, trackPaths, tags...)
+		if err != nil {
+			fmt.Println("Error creating snapshot:", err)
+			return
+		}
+
+	case command == "track":
+
+		// Ensure at least one positional argument (path) is provided
+		if len(os.Args) < 3 {
+			fmt.Println("please provide a path to track")
+			return
+		}
+
+		// Get the path to track
 		path := os.Args[2]
-		fmt.Println("Hashing files in", path, "...")
-		root, err := hashing.HashPath(path)
+
+		// Track the path
+		err := track.AddPath(path, config.TrackFile)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error tracking path:", err)
 			return
 		}
 
-		jsonData, err := json.MarshalIndent(root, "", "  ")
-		if err != nil {
-			fmt.Println("Error marshaling JSON:", err)
+		fmt.Println("Path tracked")
+
+	case command == "untrack":
+
+		// Ensure at least one positional argument (path) is provided
+		if len(os.Args) < 3 {
+			fmt.Println("please provide a path to untrack")
 			return
 		}
 
-		// fmt.Println(string(jsonData))
+		// Get the path to untrack
+		path := os.Args[2]
 
-		// Write the JSON to a file
-		file, err := os.Create("output.json")
+		// Untrack the path
+		err := track.RemovePath(path, config.TrackFile)
 		if err != nil {
-			fmt.Println("Error creating file:", err)
-			return
-		}
-		defer file.Close()
-
-		_, err = file.Write(jsonData)
-		if err != nil {
-			fmt.Println("Error writing to file:", err)
+			fmt.Println("Error untracking path:", err)
 			return
 		}
 
-		fmt.Println("JSON written to output.json")
+		fmt.Println("Path untracked")
+
 	case command == "init":
 		// Initialize the magma directory
 		err := initialize.Initialize()

@@ -2,9 +2,11 @@ package hashing
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -58,9 +60,8 @@ func TestHashNodeList(t *testing.T) {
 	}
 
 	expectedHash := hashString("abc123def456ghi789")
-	path := "test/path"
 
-	hash := hashNodeList(nodes, path)
+	hash := hashNodeList(nodes)
 
 	if hash != expectedHash {
 		t.Errorf("hashNodeList returned %s, expected %s", hash, expectedHash)
@@ -71,9 +72,8 @@ func TestHashNodeList_EmptyNodes(t *testing.T) {
 	nodes := []Node{}
 
 	expectedHash := hashString("")
-	path := "test/path"
 
-	hash := hashNodeList(nodes, path)
+	hash := hashNodeList(nodes)
 
 	if hash != expectedHash {
 		t.Errorf("hashNodeList returned %s, expected %s", hash, expectedHash)
@@ -296,5 +296,159 @@ func TestHashPath_IgnoreList_Subdirectory(t *testing.T) {
 	// Check if the subdirectory was skipped
 	if node.Hash != "skipped" {
 		t.Errorf("HashPath did not skip the subdirectory, returned %s", node.Hash)
+	}
+}
+
+func TestSnapShot(t *testing.T) {
+	// Create a temporary directory for the snapshot
+	snapshotDir, err := os.MkdirTemp("", "snapshot")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(snapshotDir) // clean up
+
+	// Create a temporary file to track
+	tmpfile, err := os.CreateTemp("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	// Write some data to the file
+	data := []byte("hello world")
+	if _, err := tmpfile.Write(data); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call the SnapShot function
+	err = SnapShot(snapshotDir, []string{tmpfile.Name()})
+	if err != nil {
+		t.Fatalf("SnapShot returned an error: %v", err)
+	}
+
+	// Check if the snapshot file was created
+	files, err := os.ReadDir(snapshotDir)
+	if err != nil {
+		t.Fatalf("Failed to read snapshot directory: %v", err)
+	}
+
+	if len(files) == 0 {
+		t.Fatal("No snapshot file created")
+	}
+
+	// Check if the snapshot file has the correct content
+	snapshotFile := filepath.Join(snapshotDir, files[0].Name())
+	content, err := os.ReadFile(snapshotFile)
+	if err != nil {
+		t.Fatalf("Failed to read snapshot file: %v", err)
+	}
+
+	var root Node
+	if err := json.Unmarshal(content, &root); err != nil {
+		t.Fatalf("Failed to unmarshal snapshot JSON: %v", err)
+	}
+
+	if root.Path != "root" {
+		t.Errorf("Expected root path to be 'root', got %s", root.Path)
+	}
+
+	if len(root.Children) != 1 {
+		fmt.Println(root.Children)
+		t.Errorf("Expected 1 child node, got %d", len(root.Children))
+	}
+}
+
+func TestSnapShot_WithTags(t *testing.T) {
+	// Create a temporary directory for the snapshot
+	snapshotDir, err := os.MkdirTemp("", "snapshot")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(snapshotDir) // clean up
+
+	// Create a temporary file to track
+	tmpfile, err := os.CreateTemp("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	// Write some data to the file
+	data := []byte("hello world")
+	if _, err := tmpfile.Write(data); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Call the SnapShot function with tags
+	err = SnapShot(snapshotDir, []string{tmpfile.Name()}, "tag1", "tag2")
+	if err != nil {
+		t.Fatalf("SnapShot returned an error: %v", err)
+	}
+
+	// Check if the snapshot file was created
+	files, err := os.ReadDir(snapshotDir)
+	if err != nil {
+		t.Fatalf("Failed to read snapshot directory: %v", err)
+	}
+
+	if len(files) == 0 {
+		t.Fatal("No snapshot file created")
+	}
+
+	// Check if the snapshot file name contains the tags
+	snapshotFile := files[0].Name()
+	if !strings.Contains(snapshotFile, "tag1") || !strings.Contains(snapshotFile, "tag2") {
+		t.Errorf("Snapshot file name does not contain tags, got %s", snapshotFile)
+	}
+}
+
+func TestSnapShot_EmptyTrackPaths(t *testing.T) {
+	// Create a temporary directory for the snapshot
+	snapshotDir, err := os.MkdirTemp("", "snapshot")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(snapshotDir) // clean up
+
+	// Call the SnapShot function with empty track paths
+	err = SnapShot(snapshotDir, []string{})
+	if err != nil {
+		t.Fatalf("SnapShot returned an error: %v", err)
+	}
+
+	// Check if the snapshot file was created
+	files, err := os.ReadDir(snapshotDir)
+	if err != nil {
+		t.Fatalf("Failed to read snapshot directory: %v", err)
+	}
+
+	if len(files) == 0 {
+		t.Fatal("No snapshot file created")
+	}
+
+	// Check if the snapshot file has the correct content
+	snapshotFile := filepath.Join(snapshotDir, files[0].Name())
+	content, err := os.ReadFile(snapshotFile)
+	if err != nil {
+		t.Fatalf("Failed to read snapshot file: %v", err)
+	}
+
+	var root Node
+	if err := json.Unmarshal(content, &root); err != nil {
+		t.Fatalf("Failed to unmarshal snapshot JSON: %v", err)
+	}
+
+	if root.Path != "root" {
+		t.Errorf("Expected root path to be 'root', got %s", root.Path)
+	}
+
+	if len(root.Children) != 0 {
+		t.Errorf("Expected 0 child nodes, got %d", len(root.Children))
 	}
 }

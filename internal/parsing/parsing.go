@@ -38,7 +38,7 @@ func ReadMagmaFile(path string) ([]string, error) {
 }
 
 // WriteTrack writes a slice of strings to a specified file, each string on a new line.
-// The file is opened in append mode, so new lines are added to the end of the file.
+// The file is opened in write-only mode, so new lines will overwrite the existing content.
 //
 // Parameters:
 //
@@ -49,8 +49,8 @@ func ReadMagmaFile(path string) ([]string, error) {
 //
 //	error - an error if there is an issue opening the file, writing to it, or flushing the buffer
 func WriteTrack(lines []string, trackFilePath string) error {
-	// open the track file in append mode
-	file, err := os.OpenFile(trackFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	// open the track file in write-only mode
+	file, err := os.OpenFile(trackFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open track file: %w", err)
 	}

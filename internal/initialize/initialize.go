@@ -3,46 +3,47 @@ package initialize
 import (
 	"bufio"
 	"fmt"
+	"magma/internal/config"
 	"os"
 )
 
 // initializes the /etc/magma directory, track file and snapshots directory
 func Initialize() error {
 	// check the existence of the /etc/magma directory
-	_, err := os.Stat("/etc/magma")
+	_, err := os.Stat(config.AppRoot)
 	if os.IsNotExist(err) {
 		// create the /etc/magma directory
-		err = os.Mkdir("/etc/magma", 0755)
+		err = os.Mkdir(config.AppRoot, 0755)
 		if err != nil {
 			return err
 		}
 	}
 
 	// check the existence of the track file
-	_, err = os.Stat("/etc/magma/track")
+	_, err = os.Stat(config.TrackFile)
 	if os.IsNotExist(err) {
 		// create the track file
-		_, err = os.Create("/etc/magma/track")
+		_, err = os.Create(config.TrackFile)
 		if err != nil {
 			return err
 		}
 	}
 
 	// check the existence of the snapshots directory
-	_, err = os.Stat("/etc/magma/snapshots")
+	_, err = os.Stat(config.SnapshotsDir)
 	if os.IsNotExist(err) {
 		// create the snapshots directory
-		err = os.Mkdir("/etc/magma/snapshots", 0755)
+		err = os.Mkdir(config.SnapshotsDir, 0755)
 		if err != nil {
 			return err
 		}
 	}
 
 	// check the existence of the /etc/magma/ignore file
-	_, err = os.Stat("/etc/magma/ignore")
+	_, err = os.Stat(config.IgnoreFile)
 	if os.IsNotExist(err) {
 		// create the /etc/magma/ignore file
-		fileName := "/etc/magma/ignore"
+		fileName := config.IgnoreFile
 
 		file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {

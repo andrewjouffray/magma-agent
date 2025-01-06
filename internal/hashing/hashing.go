@@ -2,6 +2,7 @@ package hashing
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"magma/internal/config"
@@ -68,12 +69,11 @@ func hashFile(filepath string) (string, error) {
 // Parameters:
 //
 //	nodes - a slice of Node objects, each containing a Hash field
-//	path  - a string representing the path (not used in the current implementation)
 //
 // Returns:
 //
 //	A string representing the hash of the concatenated Hash fields of the input nodes.
-func hashNodeList(nodes []Node, path string) string {
+func hashNodeList(nodes []Node) string {
 
 	// concatenates all strings in the input list
 	concatenated := ""
@@ -121,9 +121,7 @@ func HashPath(path string) (node Node, error error) {
 
 	// check if the path is in the ignore list
 	for _, ignore := range ignoreList {
-		fmt.Println("checking", ignore, "against", path)
 		if match, _ := doublestar.Match(ignore, path); match {
-			fmt.Println("skipping", path)
 			localNode.Hash = "skipped"
 			return localNode, nil
 		}
@@ -167,7 +165,7 @@ func HashPath(path string) (node Node, error error) {
 			nodes = append(nodes, child)
 		}
 		// hash all the hashes of the files in the directory
-		nodeHash := hashNodeList(nodes, path)
+		nodeHash := hashNodeList(nodes)
 		localNode.Hash = nodeHash
 		localNode.Children = nodes
 		localNode.Path = path
@@ -189,4 +187,61 @@ func HashPath(path string) (node Node, error error) {
 	localNode.Path = path
 	return localNode, nil
 
+}
+
+func SnapShot(SnapshotPath string, trackPaths []string, tags ...string) error {
+
+	// for each tracked path, create a root node
+	nodes := []Node{}
+
+	for _, path := range trackPaths {
+		node, err := HashPath(path)
+		if err != nil {
+			return err
+		}
+		nodes = append(nodes, node)
+	}
+
+	root := Node{
+		Path:     "root",
+		Hash:     hashNodeList(nodes),
+		Children: nodes,
+	}
+
+	jsonData, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	// truncate the hash to 8 characters
+	fileName := root.Hash
+	if len(fileName) > 8 {
+		fileName = fileName[:8]
+	}
+
+	// if there are tags, append them to the snapshot filename
+	if len(tags) > 0 {
+		for _, tag := range tags {
+			fileName += "_" + tag
+		}
+	}
+
+	savePath := filepath.Join(SnapshotPath, fileName)
+	savePath = savePath + ".json"
+
+	// Write the JSON to a file
+	file, err := os.Create(savePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(jsonData)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Snapshot saved to", savePath)
+
+	return nil
 }
