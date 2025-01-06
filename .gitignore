@@ -1,0 +1,16 @@
+# Ignore build output (executables and binaries)
+*.exe
+*.out
+*.o
+*.a
+magma
+
+# Ignore custom build directories
+bin/
+build/
+dist/
+
+# Ignore cache files
+*.tmp
+*.log
+*.swp
