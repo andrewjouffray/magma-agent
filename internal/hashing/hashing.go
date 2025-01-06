@@ -189,6 +189,16 @@ func HashPath(path string) (node Node, error error) {
 
 }
 
+// SnapShot creates a snapshot of the given tracked paths and saves it as a JSON file.
+// The snapshot includes the hash of each tracked path and their hierarchical structure.
+//
+// Parameters:
+//   - SnapshotPath: The directory where the snapshot JSON file will be saved.
+//   - trackPaths: A list of paths to be tracked and hashed.
+//   - tags: Optional tags to be appended to the snapshot filename.
+//
+// Returns:
+//   - error: An error if any occurs during the snapshot creation or file writing process.
 func SnapShot(SnapshotPath string, trackPaths []string, tags ...string) error {
 
 	// for each tracked path, create a root node
