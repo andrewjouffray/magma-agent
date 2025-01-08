@@ -10,16 +10,18 @@ magma agent to track system directories, compute cryptographic hashes of files w
 ## Build
 
 ```
-# build
+# after cloning
 cd magma-agent
 mkdir build
 go build -o ./build/magma
-sudo ./magma init
+sudo chmod +x ./install.sh
+sudo ./install.sh
 ```
 
 ## Tests
 
 ```
+# 'magma init' must be ran before testing
 cd magma-agent
 go test -cover ./...
 ```
