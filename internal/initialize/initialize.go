@@ -39,6 +39,36 @@ func Initialize() error {
 		}
 	}
 
+	// check the existence of the /etc/magma/config.yaml file
+	_, err = os.Stat(config.ConfigFile)
+	if os.IsNotExist(err) {
+		// create the /etc/magma/config.yaml file
+		fileName := config.ConfigFile
+
+		file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return err
+		}
+
+		lines := []string{
+			"# Configuration file for magma, device specific configurations",
+			"device_id: \"\"",
+		}
+
+		// Create a writer
+		writer := bufio.NewWriter(file)
+		writer.WriteString(lines[0] + "\n")
+		writer.WriteString(lines[1] + "\n")
+
+		// Flush the writer to ensure all data is written to the file
+		err = writer.Flush()
+		if err != nil {
+			fmt.Println("Error flushing buffer: ", err)
+		}
+
+	}
+
 	// check the existence of the /etc/magma/ignore file
 	_, err = os.Stat(config.IgnoreFile)
 	if os.IsNotExist(err) {

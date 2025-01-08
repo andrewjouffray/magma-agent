@@ -31,8 +31,19 @@ func main() {
 	fmt.Println(asciiArt)
 
 	// Ensure at least one positional argument (command) is provided
-	if len(os.Args) < 1 {
+	if len(os.Args) < 2 {
 		fmt.Println("please provide a command (e.g., snap)")
+
+		// print the help message
+		fmt.Println("Usage:")
+		fmt.Println("  magma snap [tag1] [tag2] ...")
+		fmt.Println("  magma track [path]")
+		fmt.Println("  magma untrack [path]")
+		fmt.Println("  magma init")
+
+		// print the version
+		fmt.Println("Version:", config.Version)
+
 		return
 	}
 
